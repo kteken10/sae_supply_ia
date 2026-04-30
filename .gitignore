@@ -1,0 +1,39 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Node ---
+node_modules/
+dist/
+.vite/
+*.log
+npm-debug.log*
+
+# --- Donnees generees (regenerees au build Docker via ETL) ---
+data/processed/
+audit_log.jsonl
+
+# --- CSV originaux a la racine (les copies propres restent dans data/raw/) ---
+carrefour_*.csv
+
+# --- Env locaux ---
+.env
+.env.local
+.env.*.local
+!.env.production
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# --- Docker / Fly ---
+.fly/
