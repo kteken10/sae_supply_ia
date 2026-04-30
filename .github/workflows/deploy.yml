@@ -96,6 +96,53 @@ jobs:
         env:
           VITE_API_BASE_URL: https://api-sae.dissangkevin.work/api
 
+      - name: Verify CF secrets and token validity
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CF_TOKEN" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is empty in GH secrets"; exit 1;
+          fi
+          if [ -z "$CF_ACCOUNT" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is empty in GH secrets"; exit 1;
+          fi
+          echo "Token length: ${#CF_TOKEN} chars (token prefix masked by GH if visible)"
+          echo "Account ID length: ${#CF_ACCOUNT} chars (expected 32)"
+          echo ""
+          echo "--- Token verify (CF API: /user/tokens/verify) ---"
+          curl -sS -o /tmp/verify.json -w "HTTP %{http_code}\n" \
+            "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+            -H "Authorization: Bearer ${CF_TOKEN}"
+          cat /tmp/verify.json | python3 -c "import json,sys; d=json.load(sys.stdin); print('success=', d.get('success')); [print(' err:', e.get('message')) for e in d.get('errors', [])]; print(' result:', d.get('result',{}).get('status'))"
+          echo ""
+          echo "--- Account access (CF API: /accounts/{id}) ---"
+          curl -sS -o /tmp/acc.json -w "HTTP %{http_code}\n" \
+            "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}" \
+            -H "Authorization: Bearer ${CF_TOKEN}"
+          cat /tmp/acc.json | python3 -c "import json,sys; d=json.load(sys.stdin); print('success=', d.get('success')); [print(' err:', e.get('message')) for e in d.get('errors', [])]; print(' name:', d.get('result',{}).get('name'))"
+
+      - name: Ensure CF Pages project exists
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT: sae-supply-ia
+        run: |
+          status=$(curl -sS -o /tmp/p.json -w "%{http_code}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/pages/projects/${PROJECT}" \
+            -H "Authorization: Bearer ${CF_TOKEN}")
+          if [ "$status" = "200" ]; then
+            echo "Project ${PROJECT} already exists."
+          else
+            echo "Project ${PROJECT} not found (HTTP $status). Creating..."
+            curl -sSf -X POST \
+              "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/pages/projects" \
+              -H "Authorization: Bearer ${CF_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data "{\"name\":\"${PROJECT}\",\"production_branch\":\"main\"}" \
+              | python3 -c "import json,sys; d=json.load(sys.stdin); print('created=', d.get('success'))"
+          fi
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
