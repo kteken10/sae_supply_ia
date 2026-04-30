@@ -96,31 +96,41 @@ jobs:
         env:
           VITE_API_BASE_URL: https://api-sae.dissangkevin.work/api
 
-      - name: Verify CF secrets and token validity
+      - name: Verify CF secrets + Pages permission
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           if [ -z "$CF_TOKEN" ]; then
-            echo "::error::CLOUDFLARE_API_TOKEN is empty in GH secrets"; exit 1;
+            echo "::error::CLOUDFLARE_API_TOKEN is empty"; exit 1;
           fi
           if [ -z "$CF_ACCOUNT" ]; then
-            echo "::error::CLOUDFLARE_ACCOUNT_ID is empty in GH secrets"; exit 1;
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is empty"; exit 1;
           fi
-          echo "Token length: ${#CF_TOKEN} chars (token prefix masked by GH if visible)"
-          echo "Account ID length: ${#CF_ACCOUNT} chars (expected 32)"
+          echo "Token length: ${#CF_TOKEN} | Account ID length: ${#CF_ACCOUNT}"
+
+          # On ne teste QUE les endpoints utiles a Wrangler Pages.
+          # /user/tokens/verify : token vivant
+          # /accounts/{id}/pages/projects : token a bien la permission Pages sur ce compte
           echo ""
-          echo "--- Token verify (CF API: /user/tokens/verify) ---"
-          curl -sS -o /tmp/verify.json -w "HTTP %{http_code}\n" \
+          echo "--- /user/tokens/verify ---"
+          v=$(curl -sS -o /tmp/v.json -w "%{http_code}" \
             "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-            -H "Authorization: Bearer ${CF_TOKEN}"
-          cat /tmp/verify.json | python3 -c "import json,sys; d=json.load(sys.stdin); print('success=', d.get('success')); [print(' err:', e.get('message')) for e in d.get('errors', [])]; print(' result:', d.get('result',{}).get('status'))"
+            -H "Authorization: Bearer ${CF_TOKEN}")
+          echo "HTTP $v"
+          python3 -c "import json; d=json.load(open('/tmp/v.json')); print('success=', d.get('success')); [print(' err:', (e or {}).get('message')) for e in (d.get('errors') or [])]"
+
           echo ""
-          echo "--- Account access (CF API: /accounts/{id}) ---"
-          curl -sS -o /tmp/acc.json -w "HTTP %{http_code}\n" \
-            "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}" \
-            -H "Authorization: Bearer ${CF_TOKEN}"
-          cat /tmp/acc.json | python3 -c "import json,sys; d=json.load(sys.stdin); print('success=', d.get('success')); [print(' err:', e.get('message')) for e in d.get('errors', [])]; print(' name:', d.get('result',{}).get('name'))"
+          echo "--- /accounts/{id}/pages/projects (Pages perm) ---"
+          p=$(curl -sS -o /tmp/p.json -w "%{http_code}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/pages/projects" \
+            -H "Authorization: Bearer ${CF_TOKEN}")
+          echo "HTTP $p"
+          python3 -c "import json; d=json.load(open('/tmp/p.json')); print('success=', d.get('success')); [print(' err:', (e or {}).get('message')) for e in (d.get('errors') or [])]"
+          if [ "$p" != "200" ]; then
+            echo "::error::Token cannot access Pages on this account. Add 'Account > Cloudflare Pages > Edit' permission and verify CLOUDFLARE_ACCOUNT_ID matches the token's account."
+            exit 1
+          fi
 
       - name: Ensure CF Pages project exists
         env:
