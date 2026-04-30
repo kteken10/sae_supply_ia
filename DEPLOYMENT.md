@@ -23,7 +23,7 @@ Au push sur `main` : build front + back en parallele, deploy automatique, health
 
 ### 1.2. Creation de l'app Fly.io (auto au premier deploy)
 Le workflow `.github/workflows/deploy.yml` execute :
-- `flyctl status` -> si l'app n'existe pas, `flyctl apps create sae-supply-ia-api --org dissang-tenkam-f-k`
+- `flyctl status` -> si l'app n'existe pas, `flyctl apps create sae-supply-ia-api --org personal`
 - `flyctl volumes list` -> si le volume `audit_data` n'existe pas, `flyctl volumes create audit_data --size 1 --region cdg`
 - `flyctl deploy`
 
@@ -31,7 +31,7 @@ Donc **rien a faire** : pousse sur main, le workflow s'occupe de tout.
 
 Si jamais tu veux le faire manuellement avant (pour debug) :
 ```bash
-flyctl apps create sae-supply-ia-api --org dissang-tenkam-f-k
+flyctl apps create sae-supply-ia-api --org personal
 flyctl volumes create audit_data --size 1 --region cdg --app sae-supply-ia-api
 ```
 
