@@ -1,0 +1,36 @@
+# Exclure tout ce qui n'est pas necessaire dans l'image
+.git/
+.github/
+.vscode/
+.idea/
+
+# Frontend (deploye separement sur CF Pages)
+frontend/
+
+# Donnees deja generees localement (le build refait l'ETL a partir des CSV bruts)
+data/processed/
+data/raw/audit_log.jsonl
+
+# Python local
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/venv/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editeurs
+*.swp
+*.swo
+
+# Markdown / docs
+*.md
+!README.md
+
+# CSV originaux a la racine (les copies propres sont dans data/raw/)
+carrefour_*.csv
