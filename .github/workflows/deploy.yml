@@ -19,7 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-      APP_NAME: sae-carrefour-api
+      FLY_ACCESS_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      APP_NAME: sae-supply-ia-api
+      FLY_ORG: dissang-tenkam-f-k
       REGION: cdg
     steps:
       - uses: actions/checkout@v4
@@ -29,11 +31,15 @@ jobs:
 
       - name: Ensure Fly app exists
         run: |
+          if [ -z "${FLY_API_TOKEN:-}" ]; then
+            echo "::error::FLY_API_TOKEN is empty. Add it under repo Settings > Secrets and variables > Actions."
+            exit 1
+          fi
           if flyctl status -a "$APP_NAME" >/dev/null 2>&1; then
             echo "App $APP_NAME already exists."
           else
-            echo "App $APP_NAME does not exist - creating..."
-            flyctl apps create "$APP_NAME" --org personal
+            echo "App $APP_NAME does not exist - creating in org $FLY_ORG..."
+            flyctl apps create "$APP_NAME" --org "$FLY_ORG"
           fi
 
       - name: Ensure persistent volume for audit log exists
@@ -50,8 +56,10 @@ jobs:
 
       - name: Smoke test
         run: |
-          for i in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -fsS https://sae-carrefour-api.fly.dev/api/health; then
+          URL="https://${APP_NAME}.fly.dev/api/health"
+          echo "Hitting $URL"
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if curl -fsS "$URL"; then
               echo ""
               echo "Backend up"
               exit 0
@@ -86,12 +94,12 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_API_BASE_URL: https://api-sae.sden.ch/api
+          VITE_API_BASE_URL: https://api-sae.dissangkevin.work/api
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy frontend/dist --project-name=sae-carrefour --branch=main
+          command: pages deploy frontend/dist --project-name=sae-supply-ia --branch=main
           workingDirectory: ${{ github.workspace }}

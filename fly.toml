@@ -1,7 +1,7 @@
 # Configuration Fly.io de l'API backend SAE Carrefour.
 # https://fly.io/docs/reference/configuration/
 
-app = "sae-carrefour-api"
+app = "sae-supply-ia-api"
 primary_region = "cdg"  # Paris
 
 [build]
@@ -9,7 +9,7 @@ primary_region = "cdg"  # Paris
 
 [env]
   PORT = "8000"
-  CORS_ORIGINS = "https://sae.sden.ch"
+  CORS_ORIGINS = "https://sae.dissangkevin.work"
 
 [http_service]
   internal_port = 8000
