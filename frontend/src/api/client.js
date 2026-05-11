@@ -68,3 +68,13 @@ export const settingsApi = {
   setUseEnriched: (value) =>
     api.post("/settings", { use_enriched: value }).then((r) => r.data),
 };
+
+export const weatherApi = {
+  all: () => api.get("/weather").then((r) => r.data),
+  city: (city) => api.get(`/weather/${city}`).then((r) => r.data),
+};
+
+export const calendarApi = {
+  info: () => api.get("/calendar/info").then((r) => r.data),
+  vacances: (now) => api.get("/calendar/vacances", { params: { now } }).then((r) => r.data),
+};

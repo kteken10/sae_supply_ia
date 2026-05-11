@@ -7,6 +7,15 @@ import {
   Layers,
   Activity,
   TrendingUp,
+  Cloud,
+  CloudRain,
+  Sun,
+  CloudSnow,
+  CloudFog,
+  Zap,
+  Wind,
+  CalendarDays,
+  Radio,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -28,7 +37,7 @@ import {
   PageLoader,
 } from "../components/ui";
 import { PageHeader } from "../components/PageHeader";
-import { kpisApi, stockApi, recosApi } from "../api/client";
+import { kpisApi, stockApi, recosApi, weatherApi, calendarApi } from "../api/client";
 import { useNow } from "../context/NowContext";
 
 const STATUS_COLORS = {
@@ -328,6 +337,138 @@ function AlertsList({ alerts }) {
   );
 }
 
+function weatherIconFor(code) {
+  if (code == null) return Cloud;
+  if (code === 0) return Sun;
+  if (code <= 3) return Cloud;
+  if (code <= 48) return CloudFog;
+  if (code <= 67) return CloudRain;
+  if (code <= 77) return CloudSnow;
+  if (code <= 82) return CloudRain;
+  if (code <= 86) return CloudSnow;
+  return Zap;
+}
+
+function WeatherGrid() {
+  const wQ = useQuery({
+    queryKey: ["weather"],
+    queryFn: weatherApi.all,
+    refetchInterval: 15 * 60_000,
+    staleTime: 10 * 60_000,
+  });
+  const items = wQ.data?.weather ?? [];
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Cloud className="w-4 h-4 text-slate-500" /> Meteo live - 8 magasins
+          </CardTitle>
+          <span className="inline-flex items-center gap-1.5 text-[10px] text-slate-500">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/60" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+            </span>
+            Open-Meteo
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {wQ.isLoading ? (
+          <div className="text-xs text-slate-500">Chargement...</div>
+        ) : !items.length ? (
+          <div className="text-xs text-slate-500">Aucune donnee meteo</div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {items.map((w) => {
+              const Icon = weatherIconFor(w.current.weather_code);
+              return (
+                <div
+                  key={w.city}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-900 truncate">
+                      {w.city}
+                    </span>
+                    <Icon className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                  </div>
+                  <div className="text-lg font-bold text-slate-900 tabular-nums mt-0.5">
+                    {w.current.temp_c.toFixed(0)}&deg;C
+                  </div>
+                  <div className="text-[10px] text-slate-500 truncate">
+                    {w.current.conditions}
+                  </div>
+                  <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                    <Wind className="w-2.5 h-2.5" />
+                    <span className="tabular-nums">{w.current.wind_kmh} km/h</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function VacancesBanner() {
+  const { now } = useNow();
+  const cQ = useQuery({
+    queryKey: ["calendar", now],
+    queryFn: () => calendarApi.vacances(now),
+    staleTime: 60 * 60_000,
+  });
+  if (cQ.isLoading) return null;
+  const items = cQ.data?.items ?? [];
+  const onVac = items.filter((i) => i.currently_on_vacation);
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <CalendarDays className="w-4 h-4 text-slate-500" /> Vacances scolaires
+          </CardTitle>
+          <span className="text-[10px] text-slate-500 truncate">
+            {cQ.data?.source ?? "-"}
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {onVac.length === 0 ? (
+          <div className="text-xs text-slate-500">
+            Aucun magasin en zone de vacances scolaires a la date {now}.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {onVac.map((v) => (
+              <div
+                key={v.city}
+                className="flex items-center gap-2 rounded-xl border border-accent-200 bg-accent-50 px-3 py-2"
+              >
+                <span className="text-xs font-semibold text-accent-800 w-16 flex-shrink-0">
+                  {v.city}
+                </span>
+                <Badge tone="accent">Zone {v.zone}</Badge>
+                <span className="text-xs text-accent-900 flex-1 truncate">
+                  {v.current.description}
+                </span>
+                <span className="text-[10px] text-accent-700 tabular-nums whitespace-nowrap">
+                  {v.current.start} -&gt; {v.current.end}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="text-[10px] text-slate-400 mt-2">
+          {items.length} magasins suivis * zones A/B/C selon academie
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function CategoryBreakdown({ kpis }) {
   const data = kpis?.by_categorie ?? [];
   const total = data.reduce((s, d) => s + d.skus, 0) || 1;
@@ -430,6 +571,11 @@ export default function DashboardPage() {
       </div>
 
       <AlertsStrip alerts={alerts} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <WeatherGrid />
+        <VacancesBanner />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <CATimeseries data={series} />
