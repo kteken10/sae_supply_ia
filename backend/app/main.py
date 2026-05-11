@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import CORS_ORIGINS
 from .data.loader import get_store
-from .routers import audit, catalog, forecast, kpis, recommendations, settings as settings_router, stock, suppliers
+from .routers import audit, calendar as calendar_router, catalog, forecast, kpis, recommendations, settings as settings_router, stock, suppliers, weather
 
 app = FastAPI(
     title="SAE Carrefour - Analyse Prescriptive",
@@ -52,3 +52,5 @@ app.include_router(recommendations.router)
 app.include_router(suppliers.router)
 app.include_router(audit.router)
 app.include_router(settings_router.router)
+app.include_router(weather.router)
+app.include_router(calendar_router.router)

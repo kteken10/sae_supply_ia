@@ -12,7 +12,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useNow } from "../context/NowContext";
-import { settingsApi } from "../api/client";
+import { settingsApi, weatherApi, calendarApi } from "../api/client";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard", end: true },
@@ -72,12 +72,66 @@ function Sidebar({ onClose }) {
       </nav>
       <div className="border-t border-slate-100 px-4 py-3 space-y-3">
         <EnrichmentToggle />
+        <ExternalSourcesIndicator />
         <div>
-          <div className="text-[11px] text-slate-500">MVP v0.2 - enrichi</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">RF + bootstrap + multi-fournisseurs</div>
+          <div className="text-[11px] text-slate-500">MVP v0.3 - live data</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">RF + Open-Meteo + data.gouv</div>
         </div>
       </div>
     </>
+  );
+}
+
+function ExternalSourcesIndicator() {
+  const weatherQ = useQuery({
+    queryKey: ["weather_status"],
+    queryFn: weatherApi.all,
+    refetchInterval: 5 * 60_000,
+    staleTime: 60_000,
+    retry: 1,
+  });
+  const calendarQ = useQuery({
+    queryKey: ["calendar_status"],
+    queryFn: calendarApi.info,
+    staleTime: 60 * 60_000,
+    retry: 1,
+  });
+
+  const weatherOk = weatherQ.data?.count > 0;
+  const calendarOk = (calendarQ.data?.records ?? 0) > 0;
+  const allOk = weatherOk && calendarOk;
+  return (
+    <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="relative flex h-1.5 w-1.5">
+          {allOk && (
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/60" />
+          )}
+          <span
+            className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
+              allOk ? "bg-emerald-500" : "bg-slate-400"
+            }`}
+          />
+        </span>
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+          Sources externes
+        </span>
+      </div>
+      <ul className="space-y-0.5">
+        <li className="flex items-center justify-between text-[10px]">
+          <span className="text-slate-600">Open-Meteo</span>
+          <span className={weatherOk ? "text-emerald-700" : "text-slate-400"}>
+            {weatherOk ? `${weatherQ.data.count} villes` : "..."}
+          </span>
+        </li>
+        <li className="flex items-center justify-between text-[10px]">
+          <span className="text-slate-600">data.gouv.fr</span>
+          <span className={calendarOk ? "text-emerald-700" : "text-slate-400"}>
+            {calendarOk ? `${calendarQ.data.records} dates` : "..."}
+          </span>
+        </li>
+      </ul>
+    </div>
   );
 }
 
