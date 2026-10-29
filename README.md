@@ -2,6 +2,15 @@
 
 MVP fonctionnel : ETL Python + backend FastAPI + frontend React/Vite.
 
+
+| Pilotage | Forecast & recommandation |
+|:---:|:---:|
+| <img src="docs/dashboard.jpg" alt="Tableau de bord" width="420"> | <img src="docs/forecast.jpg" alt="Prévision et recommandation" width="420"> |
+
+| Fournisseurs | Traçabilité IA Act |
+|:---:|:---:|
+| <img src="docs/suppliers.jpg" alt="Scoring des fournisseurs" width="420"> | <img src="docs/audit.jpg" alt="Journal d'audit" width="420"> |
+
 ## Architecture
 
 ```
